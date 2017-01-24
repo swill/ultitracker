@@ -1,6 +1,6 @@
 .DS_Store
 assets/*
 _deploy.sh
-client_secret.json
+google-service-account.json
 iris
 static.go
