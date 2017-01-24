@@ -1,0 +1,169 @@
+{{define "index_active"}}class="active"{{end}}
+
+{{define "styles"}}
+<style type="text/css">
+  .center {
+    text-align:center;
+  }
+</style>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/js-cookie.js"></script>
+
+<script type="text/javascript">
+  $(function() {
+    //Date picker
+    $('.datepicker').datepicker({
+      daysOfWeekHighlighted: '0,6',
+      disableTouchKeyboard: true,
+      todayHighlight: true,
+      format: 'dd/mm/yyyy',
+      autoclose: true
+    });
+
+    // cache the player name in this browser for next time
+    var player_name = Cookies.get('name')
+    if (typeof player_name != 'undefined') {
+      $(':contains('+player_name+')').attr('selected', 'selected');
+    }
+
+    // setup the form submission
+    $('#submit-entry').on('click', submit_entry);
+  });
+
+  function submit_entry() {
+    var form = {};
+    form['name'] = $('#entry-name').val();
+    form['task'] = $('#entry-task').val();
+    form['duration'] = $('#entry-duration').val();
+    form['date'] = $('#entry-date').val();
+    form['notes'] = $('#entry-notes').val();
+
+    $('#entry-notice').html('');
+    if (form['name'] == '' || form['task'] == '' || form['duration'] == '' || form['date'] == '') {
+      $('#entry-notice').html('<div class="alert alert-danger alert-dismissible"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button><h4><i class="icon fa fa-ban"></i> Error</h4>All of Name, Task, Duration and Date are required to submit an entry.</div>');
+    } else {
+      $.ajax({
+        url: '/submit-entry',
+        contentType: 'application/json; charset=utf-8',
+        data: JSON.stringify(form),
+        type: 'post',
+        beforeSend: function(jqXHR, settings) {
+          $('#entry-form').append('<div class="overlay"><i class="fa fa-refresh fa-spin"></i></div>');
+        },
+        success: function(data, status, jqXHR) {
+          $('#entry-form').find('.overlay').remove();
+          $('#entry-notice').html('<div class="alert alert-success alert-dismissible"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button><h4><i class="icon fa fa-check"></i> Success</h4>'+data["message"]+'</div>');
+          form['notes'] = $('#entry-notes').val('');
+          Cookies.set('name', $('#entry-name').val());
+        },
+        error: function(jqXHR, status, err) {
+          $('#entry-form').find('.overlay').remove();
+          $('#entry-notice').html('<div class="alert alert-danger alert-dismissible"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button><h4><i class="icon fa fa-ban"></i> Error</h4>'+err+'</div>');
+        }
+      });
+    }
+  }
+</script>
+{{end}}
+
+
+{{define "content"}}
+<div id="content" class="workout-entry">
+  
+  <div id="entry-form" class="box box-primary">
+    <div class="box-header with-border">
+      <h3 class="box-title">Enter Event</h3>
+      <div class="box-tools pull-right">
+        <!-- Buttons, labels, and many other things can be placed here! -->
+        <!-- Here is a label for example -->
+      </div><!-- /.box-tools -->
+    </div><!-- /.box-header -->
+    <div class="box-body">
+
+      <div class="col-xs-12 col-sm-6">
+        <div class="form-group">
+          <label>Name</label>
+          <select id="entry-name" class="form-control">
+          {{range .Players}}
+            <option>{{.}}</option>
+          {{end}}
+          </select>
+        </div>
+      </div>
+
+      <div class="col-xs-12 col-sm-6">
+        <div class="form-group">
+          <label>Task</label>
+          <select id="entry-task" class="form-control">
+          {{range .Tasks}}
+            <option>{{.}}</option>
+          {{end}}
+          </select>
+        </div>
+      </div>
+
+      <div class="col-xs-12 col-sm-6">
+        <div class="form-group">
+          <label>Duration</label>
+          <select id="entry-duration" class="form-control">
+            <option>10min</option>
+            <option>20min</option>
+            <option selected>30min</option>
+            <option>45min</option>
+            <option>1h</option>
+            <option>1h 15min</option>
+            <option>1h 30min</option>
+            <option>1h 45min</option>
+            <option>2h</option>
+            <option>2h 15min</option>
+            <option>2h 30min</option>
+            <option>2h 45min</option>
+            <option>3h</option>
+            <option>3h 15min</option>
+            <option>3h 30min</option>
+            <option>3h 45min</option>
+            <option>4h</option>
+            <option>4h 15min</option>
+            <option>4h 30min</option>
+            <option>4h 45min</option>
+            <option>5h</option>
+            <option>5h 15min</option>
+            <option>5h 30min</option>
+            <option>5h 45min</option>
+            <option>6h</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="col-xs-12 col-sm-6">
+        <div class="form-group">
+          <label>Date</label>
+          <div class="input-group date">
+            <div class="input-group-addon">
+              <i class="fa fa-calendar"></i>
+            </div>
+            <input id="entry-date" type="text" class="datepicker form-control pull-right" value="{{.Date}}" style="background:white;" readonly>
+          </div>
+          <!-- /.input group -->
+        </div>
+      </div>
+
+      <div class="col-xs-12">
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea id="entry-notes" class="form-control" rows="3"></textarea>
+        </div>
+      </div>
+
+      <div id="entry-notice" class="col-xs-12"></div>
+
+    </div><!-- /.box-body -->
+    <div class="box-footer">
+      <button id="submit-entry" type="button" class="btn btn-block btn-primary btn-lg">Submit</button>
+    </div><!-- box-footer -->
+  </div><!-- /.box -->
+
+</div>
+{{end}}

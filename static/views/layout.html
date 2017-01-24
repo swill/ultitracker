@@ -1,0 +1,149 @@
+
+{{define "head_includes"}}
+  <!-- Add To Home Screen icons for iOS -->
+  <link rel="apple-touch-icon" sizes="57x57" href="/static/img/iris_logo_inverse_57.png" />
+  <link rel="apple-touch-icon" sizes="72x72" href="/static/img/iris_logo_inverse_72.png" />
+  <link rel="apple-touch-icon" sizes="114x114" href="/static/img/iris_logo_inverse_114.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/static/img/iris_logo_inverse_144.png" />
+  <!-- Tell the browser to be responsive to screen width -->
+  <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+  <!-- Bootstrap 3.3.6 -->
+  <link rel="stylesheet" href="/static/theme/admin-lte/bootstrap/css/bootstrap.min.css">
+  <!-- bootstrap datepicker -->
+  <link rel="stylesheet" href="/static/theme/admin-lte/plugins/datepicker/datepicker3.css">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.5.0/css/font-awesome.min.css">
+  <!-- Ionicons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
+  <!-- Theme style -->
+  <link rel="stylesheet" href="/static/theme/admin-lte/dist/css/AdminLTE.min.css">
+  <!-- AdminLTE Skins: skin-blue -->
+  <link rel="stylesheet" href="/static/theme/admin-lte/dist/css/skins/skin-iris.min.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+  {{template "styles" .}}
+
+  <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+  <!--[if lt IE 9]>
+  <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+  <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+  <![endif]-->
+{{end}}
+
+{{define "header_nav"}}
+    <!-- Header Navbar -->
+    <nav class="navbar navbar-static-top" role="navigation">
+      <!-- Sidebar toggle button-->
+      <a href="#" class="sidebar-toggle" data-toggle="offcanvas" role="button">
+        <span class="sr-only">Toggle navigation</span>
+      </a>
+    </nav>
+{{end}}
+
+
+{{define "sidebar_nav"}}
+  <!-- Left side column. contains the logo and sidebar -->
+  <aside class="main-sidebar">
+
+    <!-- sidebar: style can be found in sidebar.less -->
+    <section class="sidebar">
+
+      <!-- Sidebar Menu -->
+      <ul class="sidebar-menu">
+        <!-- Optionally, you can add icons to the links -->
+        <li {{template "index_active"}}><a href="/"><i class="fa fa-heartbeat"></i> <span>Enter Event</span></a></li>
+      </ul>
+      <!-- /.sidebar-menu -->
+    </section>
+    <!-- /.sidebar -->
+  </aside>
+{{end}}
+
+{{define "layout"}}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>{{.Title}}</title>
+  {{template "head_includes" .}}
+</head>
+<body class="hold-transition fixed skin-iris sidebar-mini sidebar-collapse">
+<div class="wrapper">
+
+  <!-- Main Header -->
+  <header class="main-header">
+
+    <!-- Logo -->
+    <a href="/" class="logo">
+      <!-- mini logo for sidebar mini 50x50 pixels -->
+      <span class="logo-mini"><img src="/static/img/iris_logo.png" style="height:30px;" /></span>
+      <!-- logo for regular state and mobile devices -->
+      <span class="logo-lg"><img src="/static/img/iris_logo.png" style="height:30px;padding-right:3px;" /> Training Tracker</span>
+    </a>
+
+    {{template "header_nav" .}}
+  </header>
+  
+  {{template "sidebar_nav" .}}
+
+  <!-- Content Wrapper. Contains page content -->
+  <div class="content-wrapper">
+    <!-- Content Header (Page header) ->
+    <section class="content-header">
+      <h1>
+        Page Header
+        <small>Optional description</small>
+      </h1>
+    </section>-->
+
+    <!-- Main content -->
+    <section class="content">
+
+      <!-- Your Page Content Here -->
+      {{template "content" .}}
+
+    </section>
+    <!-- /.content -->
+  </div>
+  <!-- /.content-wrapper -->
+
+  <!-- Main Footer -->
+  <footer class="main-footer">
+    <!-- To the right -->
+    <div class="pull-right hidden-xs">
+      Built with <i class="fa fa-heart" aria-hidden="true"></i> by <a href="https://github.com/swill" target="_blank">swill</a>
+    </div>
+    <!-- Default to the left -->
+    &nbsp;
+  </footer>
+</div>
+<!-- ./wrapper -->
+
+<!-- REQUIRED JS SCRIPTS -->
+
+<!-- jQuery 2.2.3 -->
+<script src="/static/theme/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+<!-- Bootstrap 3.3.6 -->
+<script src="/static/theme/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+<!-- bootstrap datepicker -->
+<script src="/static/theme/admin-lte/plugins/datepicker/bootstrap-datepicker.js"></script>
+<!-- SlimScroll -->
+<script src="/static/theme/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+<!-- AdminLTE App -->
+<script src="/static/theme/admin-lte/dist/js/app.min.js"></script>
+
+{{template "scripts" .}}
+
+<!-- Optionally, you can add Slimscroll and FastClick plugins.
+     Both of these plugins are recommended to enhance the
+     user experience. Slimscroll is required when using the
+     fixed layout. -->
+</body>
+</html>
+{{end}}
+
+{{define "content"}}{{end}}
+{{define "index_active"}}{{end}}}
+{{define "styles"}}{{end}}
+{{define "scripts"}}{{end}}

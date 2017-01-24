@@ -1,0 +1,6 @@
+.DS_Store
+assets/*
+_deploy.sh
+client_secret.json
+iris
+static.go
