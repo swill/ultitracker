@@ -1,6 +1,7 @@
 .DS_Store
 assets/*
-_deploy.sh
+bin/*
+__config.sh
 google-service-account.json
 ultitracker
 static.go

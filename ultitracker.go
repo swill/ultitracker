@@ -103,6 +103,24 @@ func main() {
 		log.Fatalf("Unable to retrieve Sheets Client %v", err)
 	}
 
+	// get players list to validate that we have valid permissions on the specified sheet and the range works
+	_, err = srv.Spreadsheets.Values.Get(viper.GetString("spreadsheet_id"), viper.GetString("player_range")).Do()
+	if err != nil {
+		log.Fatalf("Unable to access 'player_range': %s", err.Error())
+	}
+
+	// get tasks list to validate that we have valid permissions on the specified sheet and the range works
+	_, err = srv.Spreadsheets.Values.Get(viper.GetString("spreadsheet_id"), viper.GetString("task_range")).Do()
+	if err != nil {
+		log.Fatalf("Unable to access 'task_range': %s", err.Error())
+	}
+
+	// get stats list to validate that we have valid permissions on the specified sheet and the range works
+	_, err = srv.Spreadsheets.Values.Get(viper.GetString("spreadsheet_id"), viper.GetString("stats_range")).Do()
+	if err != nil {
+		log.Fatalf("Unable to access 'stats_range': %s", err.Error())
+	}
+
 	// setup template functions
 	func_map := template.FuncMap{
 		"raw": func(msg interface{}) template.HTML { return template.HTML(msg.(template.HTML)) },
