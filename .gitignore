@@ -2,5 +2,12 @@
 assets/*
 _deploy.sh
 google-service-account.json
-iris
+ultitracker
 static.go
+config.*
+static/img/favicon.png
+static/img/logo.png
+static/img/logo_114.png
+static/img/logo_144.png
+static/img/logo_57.png
+static/img/logo_72.png

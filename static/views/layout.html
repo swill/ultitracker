@@ -1,10 +1,10 @@
 
 {{define "head_includes"}}
   <!-- Add To Home Screen icons for iOS -->
-  <link rel="apple-touch-icon" sizes="57x57" href="/static/img/iris_logo_inverse_57.png" />
-  <link rel="apple-touch-icon" sizes="72x72" href="/static/img/iris_logo_inverse_72.png" />
-  <link rel="apple-touch-icon" sizes="114x114" href="/static/img/iris_logo_inverse_114.png" />
-  <link rel="apple-touch-icon" sizes="144x144" href="/static/img/iris_logo_inverse_144.png" />
+  <link rel="apple-touch-icon" sizes="57x57" href="/static/img/logo_57.png" />
+  <link rel="apple-touch-icon" sizes="72x72" href="/static/img/logo_72.png" />
+  <link rel="apple-touch-icon" sizes="114x114" href="/static/img/logo_114.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/static/img/logo_144.png" />
   <!-- Tell the browser to be responsive to screen width -->
   <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
   <!-- Bootstrap 3.3.6 -->
@@ -18,7 +18,7 @@
   <!-- Theme style -->
   <link rel="stylesheet" href="/static/theme/admin-lte/dist/css/AdminLTE.min.css">
   <!-- AdminLTE Skins: skin-blue -->
-  <link rel="stylesheet" href="/static/theme/admin-lte/dist/css/skins/skin-iris.min.css">
+  <link rel="stylesheet" href="/static/theme/admin-lte/dist/css/skins/skin-tracker.min.css">
   <link rel="stylesheet" href="/static/css/style.css">
   {{template "styles" .}}
 
@@ -51,7 +51,7 @@
       <!-- Sidebar Menu -->
       <ul class="sidebar-menu">
         <!-- Optionally, you can add icons to the links -->
-        <li {{template "index_active"}}><a href="/"><i class="fa fa-heartbeat"></i> <span>Enter Event</span></a></li>
+        <li {{template "index_active"}}><a href="/"><i class="fa fa-heartbeat"></i> <span>Add Session</span></a></li>
       </ul>
       <!-- /.sidebar-menu -->
     </section>
@@ -68,7 +68,7 @@
   <title>{{.Title}}</title>
   {{template "head_includes" .}}
 </head>
-<body class="hold-transition fixed skin-iris sidebar-mini sidebar-collapse">
+<body class="hold-transition fixed skin-tracker sidebar-mini sidebar-collapse">
 <div class="wrapper">
 
   <!-- Main Header -->
@@ -77,9 +77,9 @@
     <!-- Logo -->
     <a href="/" class="logo">
       <!-- mini logo for sidebar mini 50x50 pixels -->
-      <span class="logo-mini"><img src="/static/img/iris_logo.png" style="height:30px;" /></span>
+      <span class="logo-mini"><img src="/static/img/logo.png" style="height:30px;" /></span>
       <!-- logo for regular state and mobile devices -->
-      <span class="logo-lg"><img src="/static/img/iris_logo.png" style="height:30px;padding-right:3px;" /> Training Tracker</span>
+      <span class="logo-lg"><img src="/static/img/logo.png" style="height:30px;padding-right:3px;" /> <b>Ulti</b>Tracker</span>
     </a>
 
     {{template "header_nav" .}}
@@ -111,10 +111,9 @@
   <!-- Main Footer -->
   <footer class="main-footer">
     <!-- To the right -->
-    <div class="pull-right hidden-xs">
-      Built with <i class="fa fa-heart" aria-hidden="true"></i> by <a href="https://github.com/swill" target="_blank">swill</a>
-    </div>
+    <div class="pull-right hidden-xs"></div>
     <!-- Default to the left -->
+    Built with <i class="fa fa-heart" aria-hidden="true"></i> by <a href="https://github.com/swill" target="_blank">swill</a>
     &nbsp;
   </footer>
 </div>
