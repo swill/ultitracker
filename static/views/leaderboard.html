@@ -32,9 +32,17 @@
 <div id="content" class="leaderboards">
 
   {{ $length := len .Leaderboards }} {{ if eq $length 0 }}
-    <div class="callout callout-info">
-      <h4>No Leaders Yet!</h4>
-      <p>Until sessions have been entered, you will not see anything on this page.</p>
+    <div class="box box-primary box-solid">
+      <div class="box-header with-border">
+        <h3 class="box-title">No Leaders Yet!</h3>
+        <div class="box-tools pull-right"></div>
+        <!-- /.box-tools -->
+      </div>
+      <!-- /.box-header -->
+      <div class="box-body">
+        Until sessions have been entered, you will not see anything on this page.
+      </div>
+      <!-- /.box-body -->
     </div>
   {{ end }}
 
@@ -74,7 +82,6 @@
 
     {{end}}
     </div>
-  </div>
 
 </div>
 {{end}}
