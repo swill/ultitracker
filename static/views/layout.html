@@ -52,6 +52,7 @@
       <ul class="sidebar-menu">
         <!-- Optionally, you can add icons to the links -->
         <li {{template "index_active"}}><a href="/"><i class="fa fa-heartbeat"></i> <span>Add Session</span></a></li>
+        <li {{template "leaderboard_active"}}><a href="/leaderboard"><i class="fa fa-sort-amount-desc"></i> <span>Leaderboard</span></a></li>
       </ul>
       <!-- /.sidebar-menu -->
     </section>
@@ -79,7 +80,7 @@
       <!-- mini logo for sidebar mini 50x50 pixels -->
       <span class="logo-mini"><img src="/static/img/logo.png" style="height:30px;" /></span>
       <!-- logo for regular state and mobile devices -->
-      <span class="logo-lg"><img src="/static/img/logo.png" style="height:30px;padding-right:3px;" /> <b>Ulti</b>Tracker</span>
+      <span class="logo-lg"><img src="/static/img/logo.png" style="height:30px;padding-right:3px;margin-top:-2px;" /> <b>Ulti</b>Tracker</span>
     </a>
 
     {{template "header_nav" .}}
@@ -144,5 +145,6 @@
 
 {{define "content"}}{{end}}
 {{define "index_active"}}{{end}}}
+{{define "leaderboard_active"}}{{end}}
 {{define "styles"}}{{end}}
 {{define "scripts"}}{{end}}

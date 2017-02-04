@@ -7,11 +7,17 @@ if [ -z ${TEAM} ]; then
 	echo "Missing team so no config file applied..."
 else
 	case ${TEAM} in
+	    "6ixers" )
+	        COLOR="#532D6D"
+	        ;;
 	    "iris" )
 	        COLOR="#313181"
 	        ;;
 	    "royal" )
 			COLOR="#253552"
+			;;
+	    "stella" )
+			COLOR="#139A14"
 			;;
 	esac
 

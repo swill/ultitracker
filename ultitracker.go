@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,10 +19,18 @@ import (
 	sheets "google.golang.org/api/sheets/v4"
 )
 
+const (
+	// stats cols
+	NAME_COL int = 0
+	TASK_COL int = 1
+	TIME_COL int = 2
+	DATE_COL int = 3
+	NOTE_COL int = 4
+)
+
 // spreadsheet URL looks like:
 // // https://docs.google.com/spreadsheets/d/1Kh7AcFON0ZGHGaeDQpqbLLIndtRrZTdD5XVTv6CTjfI/edit#gid=0
 var (
-	//conf             *globalconf.GlobalConf
 	srv              *sheets.Service
 	tpl              map[string]*template.Template
 	use_local_static = false
@@ -123,6 +133,8 @@ func main() {
 
 	// setup template functions
 	func_map := template.FuncMap{
+		"inc": func(i int) int { return i + 1 },        // 1 based array from 0 based array
+		"mod": func(i, j int) bool { return i%j == 0 }, // modulo: {{if mod $index 4}}
 		"raw": func(msg interface{}) template.HTML { return template.HTML(msg.(template.HTML)) },
 	}
 	// setup templates
@@ -130,19 +142,21 @@ func main() {
 	tpl["index"] = template.Must(template.New("").Funcs(func_map).Parse(fmt.Sprintf("%s%s",
 		FSMustString(use_local_static, "/static/views/index.html"),
 		FSMustString(use_local_static, "/static/views/layout.html"))))
+	tpl["leaderboard"] = template.Must(template.New("").Funcs(func_map).Parse(fmt.Sprintf("%s%s",
+		FSMustString(use_local_static, "/static/views/leaderboard.html"),
+		FSMustString(use_local_static, "/static/views/layout.html"))))
 	tpl["error"] = template.Must(template.New("").Funcs(func_map).Parse(fmt.Sprintf("%s%s",
 		FSMustString(use_local_static, "/static/views/error.html"),
 		FSMustString(use_local_static, "/static/views/layout.html"))))
 
 	// handle the url routing
 	http.HandleFunc("/", handleIndex)
+	http.HandleFunc("/leaderboard", handleLeaderboard)
 	http.HandleFunc("/submit-entry", handleSubmitEntry)
 	http.Handle("/static/", http.FileServer(FS(use_local_static)))
 
 	// serve single root level files
 	handleSingle("/favicon.ico", "/static/img/favicon.png")
-
-	log.Println("server started...")
 
 	// start the web server
 	log.Printf("ultitracker started - http://localhost:%d\n", viper.GetInt("port"))
@@ -178,7 +192,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(player_resp.Values) > 0 {
 		for r, row := range player_resp.Values {
-			if r != 0 {
+			if r != 0 { // heading row
 				page.Players = append(page.Players, strings.Trim(row[0].(string), " "))
 			}
 		}
@@ -191,7 +205,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(task_resp.Values) > 0 {
 		for r, row := range task_resp.Values {
-			if r != 0 {
+			if r != 0 { // heading row
 				page.Tasks = append(page.Tasks, strings.Trim(row[0].(string), " "))
 			}
 		}
@@ -199,6 +213,135 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 
 	// render the page...
 	if err := tpl["index"].ExecuteTemplate(w, "layout", page); err != nil {
+		log.Printf("Error executing template: %s\n", err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	return
+}
+
+type PageLeaderboard struct {
+	Title        string
+	Leaderboards LeaderboardList
+}
+
+type Leaderboard struct {
+	Title   string
+	Players PlayerList
+	Weight  float64
+}
+
+type LeaderboardList []Leaderboard
+
+func (l LeaderboardList) Len() int           { return len(l) }
+func (l LeaderboardList) Less(i, j int) bool { return l[i].Weight < l[j].Weight }
+func (l LeaderboardList) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
+
+type Player struct {
+	Name  string
+	Score float64
+}
+
+type PlayerList []Player
+
+func (p PlayerList) Len() int           { return len(p) }
+func (p PlayerList) Less(i, j int) bool { return p[i].Score < p[j].Score }
+func (p PlayerList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p PlayerList) Sum() float64 {
+	total := 0.0
+	for i := range p {
+		total += p[i].Score
+	}
+	return total
+}
+
+func OrderPlayers(player_map map[string]float64) PlayerList {
+	pl := make(PlayerList, len(player_map))
+	i := 0
+	for k, v := range player_map {
+		pl[i] = Player{k, v}
+		i++
+	}
+	sort.Sort(sort.Reverse(pl))
+	return pl
+}
+
+// leaderboard page
+func handleLeaderboard(w http.ResponseWriter, r *http.Request) {
+	page := &PageLeaderboard{
+		Title:        fmt.Sprintf("Leaderboards | %s UltiTracker", viper.GetString("team")),
+		Leaderboards: LeaderboardList{},
+	}
+
+	overall := make(map[string]float64)
+	task_maps := make(map[string]map[string]float64)
+	// get players list
+	stats_resp, err := srv.Spreadsheets.Values.Get(viper.GetString("spreadsheet_id"), viper.GetString("stats_range")).Do()
+	if err != nil {
+		log.Printf("Unable to retrieve stats list from sheet. %s", err.Error())
+	}
+	if len(stats_resp.Values) > 0 {
+		for r, row := range stats_resp.Values {
+			if r != 0 { // heading row
+				name := strings.Trim(row[NAME_COL].(string), " ")
+				task := strings.Trim(row[TASK_COL].(string), " ")
+				duration, err := strconv.ParseFloat(row[TIME_COL].(string), 64)
+				if err != nil {
+					continue
+				}
+
+				// handle overall time
+				if col_val, ok := overall[name]; ok {
+					overall[name] = col_val + duration
+				} else {
+					overall[name] = duration
+				}
+
+				// handle per task maps of player time
+				if _, ok := task_maps[task]; ok {
+					if player_score, ok := task_maps[task][name]; ok {
+						task_maps[task][name] = player_score + duration
+					} else {
+						task_maps[task][name] = duration
+					}
+				} else {
+					player := make(map[string]float64)
+					player[name] = duration
+					task_maps[task] = player
+				}
+			}
+		}
+	}
+
+	// check we have an overall value and add it if we do
+	if len(overall) > 0 {
+		if len(overall) >= 5 {
+			pl := OrderPlayers(overall)[:5]
+			page.Leaderboards = append(page.Leaderboards, Leaderboard{"Overall Leaders", pl, pl.Sum()})
+		} else {
+			pl := OrderPlayers(overall)
+			page.Leaderboards = append(page.Leaderboards, Leaderboard{"Overall Leaders", pl, pl.Sum()})
+		}
+	}
+
+	// add leaderboards for the different tasks
+	if len(task_maps) > 0 {
+		for task, player_map := range task_maps {
+			if len(player_map) > 0 {
+				if len(player_map) >= 5 {
+					pl := OrderPlayers(player_map)[:5]
+					page.Leaderboards = append(page.Leaderboards, Leaderboard{task, pl, pl.Sum()})
+				} else {
+					pl := OrderPlayers(player_map)
+					page.Leaderboards = append(page.Leaderboards, Leaderboard{task, pl, pl.Sum()})
+				}
+			}
+		}
+	}
+
+	sort.Sort(sort.Reverse(page.Leaderboards))
+
+	// render the page...
+	if err := tpl["leaderboard"].ExecuteTemplate(w, "layout", page); err != nil {
 		log.Printf("Error executing template: %s\n", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
