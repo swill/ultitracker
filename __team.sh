@@ -10,8 +10,17 @@ else
 	    "6ixers" )
 	        COLOR="#532D6D"
 	        ;;
+	    "blaze" )
+	        COLOR="#bf0404"
+	        ;;
+	    "eclipse" )
+	        COLOR="#33ACDD"
+	        ;;
 	    "iris" )
 	        COLOR="#313181"
+	        ;;
+	    "nebula" )
+	        COLOR="#33ACDD"
 	        ;;
 	    "royal" )
 			COLOR="#253552"

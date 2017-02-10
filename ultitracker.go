@@ -35,8 +35,7 @@ var (
 	tpl              map[string]*template.Template
 	use_local_static = false
 	time_map         = map[string]float64{
-		"10min":    0.17,
-		"20min":    0.33,
+		"15min":    0.25,
 		"30min":    0.5,
 		"45min":    0.75,
 		"1h":       1,
@@ -133,6 +132,7 @@ func main() {
 
 	// setup template functions
 	func_map := template.FuncMap{
+		"fmt": func(f float64) string { return fmt.Sprintf("%.2f", f) },
 		"inc": func(i int) int { return i + 1 },        // 1 based array from 0 based array
 		"mod": func(i, j int) bool { return i%j == 0 }, // modulo: {{if mod $index 4}}
 		"raw": func(msg interface{}) template.HTML { return template.HTML(msg.(template.HTML)) },

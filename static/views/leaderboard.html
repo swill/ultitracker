@@ -71,7 +71,7 @@
                 <tr>
                   <td>{{inc $i}}.</td>
                   <td>{{$p.Name}}</td>
-                  <td class="center"><span class="badge {{if eq $index $boom_index}}bg-green{{else}}bg-blue{{end}}">{{$p.Score}}</span></td>
+                  <td class="center"><span class="badge {{if eq $index $boom_index}}bg-green{{else}}bg-blue{{end}}">{{fmt $p.Score}}</span></td>
                 </tr>
                 {{end}}
               </tbody></table>
