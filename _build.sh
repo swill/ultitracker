@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# build the theme components (first arg = theme name)
-source __team.sh
+# build the theme components
+source __teams.sh
 
 # build the binaries
 esc -o static.go static

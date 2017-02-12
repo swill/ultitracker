@@ -1,10 +1,10 @@
 
 {{define "head_includes"}}
   <!-- Add To Home Screen icons for iOS -->
-  <link rel="apple-touch-icon" sizes="57x57" href="/static/img/logo_57.png" />
-  <link rel="apple-touch-icon" sizes="72x72" href="/static/img/logo_72.png" />
-  <link rel="apple-touch-icon" sizes="114x114" href="/static/img/logo_114.png" />
-  <link rel="apple-touch-icon" sizes="144x144" href="/static/img/logo_144.png" />
+  <link rel="apple-touch-icon" sizes="57x57" href="/static/team/{{.Team}}/img/logo_57.png" />
+  <link rel="apple-touch-icon" sizes="72x72" href="/static/team/{{.Team}}/img/logo_72.png" />
+  <link rel="apple-touch-icon" sizes="114x114" href="/static/team/{{.Team}}/img/logo_114.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/static/team/{{.Team}}/img/logo_144.png" />
   <!-- Tell the browser to be responsive to screen width -->
   <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
   <!-- Bootstrap 3.3.6 -->
@@ -16,9 +16,9 @@
   <!-- Ionicons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
   <!-- Theme style -->
-  <link rel="stylesheet" href="/static/theme/admin-lte/dist/css/AdminLTE.min.css">
+  <link rel="stylesheet" href="/static/team/{{.Team}}/css/AdminLTE.min.css">
   <!-- AdminLTE Skins: skin-blue -->
-  <link rel="stylesheet" href="/static/theme/admin-lte/dist/css/skins/skin-tracker.min.css">
+  <link rel="stylesheet" href="/static/team/{{.Team}}/css/skin-tracker.min.css">
   <link rel="stylesheet" href="/static/css/style.css">
   {{template "styles" .}}
 
@@ -78,9 +78,9 @@
     <!-- Logo -->
     <a href="/" class="logo">
       <!-- mini logo for sidebar mini 50x50 pixels -->
-      <span class="logo-mini"><img src="/static/img/logo.png" style="height:30px;" /></span>
+      <span class="logo-mini"><img src="/static/team/{{.Team}}/img/logo.png" style="height:30px;" /></span>
       <!-- logo for regular state and mobile devices -->
-      <span class="logo-lg"><img src="/static/img/logo.png" style="height:30px;padding-right:3px;margin-top:-2px;" /> <b>Ulti</b>Tracker</span>
+      <span class="logo-lg"><img src="/static/team/{{.Team}}/img/logo.png" style="height:30px;padding-right:3px;margin-top:-2px;" /> <b>Ulti</b>Tracker</span>
     </a>
 
     {{template "header_nav" .}}

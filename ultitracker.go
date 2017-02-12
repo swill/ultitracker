@@ -13,9 +13,10 @@ import (
 	"strings"
 	"time"
 
+	sheets "google.golang.org/api/sheets/v4"
+
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2/google"
-	sheets "google.golang.org/api/sheets/v4"
 )
 
 const (
@@ -30,9 +31,11 @@ const (
 // spreadsheet URL looks like:
 // // https://docs.google.com/spreadsheets/d/1Kh7AcFON0ZGHGaeDQpqbLLIndtRrZTdD5XVTv6CTjfI/edit#gid=0
 var (
-	srv              *sheets.Service
 	tpl              map[string]*template.Template
+	sheet            map[string]*sheets.Service
+	teams            map[string]*viper.Viper
 	use_local_static = false
+	prefix           = "team_"
 	time_map         = map[string]float64{
 		"15min":    0.25,
 		"30min":    0.5,
@@ -62,11 +65,9 @@ var (
 )
 
 func main() {
-	// set defaults
-	viper.SetDefault("player_range", "Settings!A:A")
-	viper.SetDefault("task_range", "Settings!B:B")
-	viper.SetDefault("stats_range", "Stats!A:E")
-	viper.SetDefault("service_creds", "google-service-account.json")
+	tpl = make(map[string]*template.Template)
+	sheet = make(map[string]*sheets.Service)
+	teams = make(map[string]*viper.Viper)
 
 	// read config from a file
 	viper.SetConfigName("config")
@@ -76,19 +77,32 @@ func main() {
 		log.Fatalf("Error parsing config file: %s", err)
 	}
 
+	for _, key := range viper.AllKeys() {
+		if strings.HasPrefix(key, prefix) {
+			team := strings.TrimPrefix(key, prefix)
+			teams[team] = viper.Sub(key)
+			// set team defaults
+			teams[team].SetDefault("player_range", "Settings!A:A")
+			teams[team].SetDefault("task_range", "Settings!B:B")
+			teams[team].SetDefault("stats_range", "Stats!A:E")
+		}
+	}
+
+	// set global defaults
+	viper.SetDefault("port", 8080)
+	viper.SetDefault("service_creds", "google-service-account.json")
+
 	// validate we have all the config required to start
 	missing_config := false
-	if !viper.IsSet("team") {
-		log.Println("Error: Missing required 'team' details in config file.")
-		missing_config = true
-	}
-	if !viper.IsSet("port") {
-		log.Println("Error: Missing required 'port' details in config file.")
-		missing_config = true
-	}
-	if !viper.IsSet("spreadsheet_id") {
-		log.Println("Error: Missing required 'spreadsheet_id' details in config file. EG: '1Kh7AcFON0ZGHGaeDQpqbLLIndtRrZTdD5XVTv6CTjfI'")
-		missing_config = true
+	for team, config := range teams {
+		if !config.IsSet("name") {
+			log.Printf("Error: Missing required 'name' details in config file for '%s'.\n", team)
+			missing_config = true
+		}
+		if !config.IsSet("spreadsheet_id") {
+			log.Printf("Error: Missing required 'spreadsheet_id' details in config file for '%s'. EG: '1Kh7AcFON0ZGHGaeDQpqbLLIndtRrZTdD5XVTv6CTjfI'\n", team)
+			missing_config = true
+		}
 	}
 	if missing_config {
 		log.Fatal("Missing required configuration details, please update the config file.")
@@ -97,34 +111,36 @@ func main() {
 	// set the required environment variable
 	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", viper.GetString("service_creds"))
 
-	// setup sheet
+	// setup sheet(s)
 	// details here: https://developers.google.com/identity/protocols/application-default-credentials
 	client, err := google.DefaultClient(context.Background(), "https://www.googleapis.com/auth/spreadsheets")
 	if err != nil {
 		log.Fatalf("Unable to setup google client: %v", err)
 	}
 
-	srv, err = sheets.New(client)
-	if err != nil {
-		log.Fatalf("Unable to retrieve Sheets Client %v", err)
-	}
+	for team, config := range teams {
+		sheet[team], err = sheets.New(client)
+		if err != nil {
+			log.Fatalf("Unable to retrieve Sheets Client for '%s': %v", team, err)
+		}
 
-	// get players list to validate that we have valid permissions on the specified sheet and the range works
-	_, err = srv.Spreadsheets.Values.Get(viper.GetString("spreadsheet_id"), viper.GetString("player_range")).Do()
-	if err != nil {
-		log.Fatalf("Unable to access 'player_range': %s", err.Error())
-	}
+		// get players list to validate that we have valid permissions on the specified sheet and the range works
+		_, err = sheet[team].Spreadsheets.Values.Get(config.GetString("spreadsheet_id"), config.GetString("player_range")).Do()
+		if err != nil {
+			log.Fatalf("Unable to access 'player_range' for '%s': %s", team, err.Error())
+		}
 
-	// get tasks list to validate that we have valid permissions on the specified sheet and the range works
-	_, err = srv.Spreadsheets.Values.Get(viper.GetString("spreadsheet_id"), viper.GetString("task_range")).Do()
-	if err != nil {
-		log.Fatalf("Unable to access 'task_range': %s", err.Error())
-	}
+		// get tasks list to validate that we have valid permissions on the specified sheet and the range works
+		_, err = sheet[team].Spreadsheets.Values.Get(config.GetString("spreadsheet_id"), config.GetString("task_range")).Do()
+		if err != nil {
+			log.Fatalf("Unable to access 'task_range' for '%s': %s", team, err.Error())
+		}
 
-	// get stats list to validate that we have valid permissions on the specified sheet and the range works
-	_, err = srv.Spreadsheets.Values.Get(viper.GetString("spreadsheet_id"), viper.GetString("stats_range")).Do()
-	if err != nil {
-		log.Fatalf("Unable to access 'stats_range': %s", err.Error())
+		// get stats list to validate that we have valid permissions on the specified sheet and the range works
+		_, err = sheet[team].Spreadsheets.Values.Get(config.GetString("spreadsheet_id"), config.GetString("stats_range")).Do()
+		if err != nil {
+			log.Fatalf("Unable to access 'stats_range' for '%s': %s", team, err.Error())
+		}
 	}
 
 	// setup template functions
@@ -135,7 +151,6 @@ func main() {
 		"raw": func(msg interface{}) template.HTML { return template.HTML(msg.(template.HTML)) },
 	}
 	// setup templates
-	tpl = make(map[string]*template.Template)
 	tpl["index"] = template.Must(template.New("").Funcs(func_map).Parse(fmt.Sprintf("%s%s",
 		FSMustString(use_local_static, "/static/views/index.html"),
 		FSMustString(use_local_static, "/static/views/layout.html"))))
@@ -153,7 +168,7 @@ func main() {
 	http.Handle("/static/", http.FileServer(FS(use_local_static)))
 
 	// serve single root level files
-	handleSingle("/favicon.ico", "/static/img/favicon.png")
+	handleTeamSingle("/favicon.ico", "favicon.png")
 
 	// start the web server
 	log.Printf("ultitracker started - http://localhost:%d\n", viper.GetInt("port"))
@@ -162,6 +177,7 @@ func main() {
 
 type PageIndex struct {
 	Title   string
+	Team    string
 	Date    string
 	Players []string
 	Tasks   []string
@@ -174,16 +190,19 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	team := get_team(r.Host)
+	config := teams[team]
 	year, month, day := time.Now().Date()
 	page := &PageIndex{
-		Title:   fmt.Sprintf("Add Session | %s UltiTracker", viper.GetString("team")),
+		Title:   fmt.Sprintf("Add Session | %s UltiTracker", config.GetString("name")),
+		Team:    team,
 		Date:    fmt.Sprintf("%d/%d/%d", day, month, year),
 		Players: make([]string, 0),
 		Tasks:   make([]string, 0),
 	}
 
 	// get players list
-	player_resp, err := srv.Spreadsheets.Values.Get(viper.GetString("spreadsheet_id"), viper.GetString("player_range")).Do()
+	player_resp, err := sheet[team].Spreadsheets.Values.Get(config.GetString("spreadsheet_id"), config.GetString("player_range")).Do()
 	if err != nil {
 		log.Printf("Unable to retrieve player list from sheet. %v", err)
 	}
@@ -196,7 +215,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// get tasks list
-	task_resp, err := srv.Spreadsheets.Values.Get(viper.GetString("spreadsheet_id"), viper.GetString("task_range")).Do()
+	task_resp, err := sheet[team].Spreadsheets.Values.Get(config.GetString("spreadsheet_id"), config.GetString("task_range")).Do()
 	if err != nil {
 		log.Printf("Unable to retrieve task list from sheet. %v", err)
 	}
@@ -218,6 +237,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 
 type PageLeaderboard struct {
 	Title        string
+	Team         string
 	Leaderboards LeaderboardList
 }
 
@@ -264,15 +284,18 @@ func OrderPlayers(player_map map[string]float64) PlayerList {
 
 // leaderboard page
 func handleLeaderboard(w http.ResponseWriter, r *http.Request) {
+	team := get_team(r.Host)
+	config := teams[team]
 	page := &PageLeaderboard{
-		Title:        fmt.Sprintf("Leaderboards | %s UltiTracker", viper.GetString("team")),
+		Title:        fmt.Sprintf("Leaderboards | %s UltiTracker", config.GetString("name")),
+		Team:         team,
 		Leaderboards: LeaderboardList{},
 	}
 
 	overall := make(map[string]float64)
 	task_maps := make(map[string]map[string]float64)
 	// get players list
-	stats_resp, err := srv.Spreadsheets.Values.Get(viper.GetString("spreadsheet_id"), viper.GetString("stats_range")).Do()
+	stats_resp, err := sheet[team].Spreadsheets.Values.Get(config.GetString("spreadsheet_id"), config.GetString("stats_range")).Do()
 	if err != nil {
 		log.Printf("Unable to retrieve stats list from sheet. %s", err.Error())
 	}
@@ -359,6 +382,8 @@ type SubmitEntryRes struct {
 
 // get a person's time
 func handleSubmitEntry(w http.ResponseWriter, r *http.Request) {
+	team := get_team(r.Host)
+	config := teams[team]
 	decoder := json.NewDecoder(r.Body)
 	var req SubmitEntryReq
 	err := decoder.Decode(&req)
@@ -378,7 +403,7 @@ func handleSubmitEntry(w http.ResponseWriter, r *http.Request) {
 		req.Notes,
 	})
 
-	_, err = srv.Spreadsheets.Values.Append(viper.GetString("spreadsheet_id"), viper.GetString("stats_range"), &vr).ValueInputOption("USER_ENTERED").Do()
+	_, err = sheet[team].Spreadsheets.Values.Append(config.GetString("spreadsheet_id"), config.GetString("stats_range"), &vr).ValueInputOption("USER_ENTERED").Do()
 	if err != nil {
 		log.Printf("Failed to save the data to the spreadsheet. %v\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -401,11 +426,13 @@ func handleSubmitEntry(w http.ResponseWriter, r *http.Request) {
 
 // match a url pattern and serve a single file in response.
 // eg: /favicon.ico from /static/img/favicon.ico
-func handleSingle(pattern string, filename string) {
+func handleTeamSingle(pattern, filename string) {
 	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
-		b, err := FSByte(use_local_static, filename)
+		team := get_team(r.Host)
+		filepath := fmt.Sprintf("/static/team/%s/img/%s", team, filename)
+		b, err := FSByte(use_local_static, filepath)
 		if err != nil {
-			log.Printf("Error serving single file: %s\n %s\n", filename, err.Error())
+			http.Error(w, "Resource not found.", 404)
 		}
 		w.Write(b)
 	})
@@ -413,18 +440,21 @@ func handleSingle(pattern string, filename string) {
 
 type PageError struct {
 	Title     string
+	Team      string
 	ErrorCode int
 	ErrorDesc string
 }
 
 // handle any http error you encounter
 func handleError(w http.ResponseWriter, r *http.Request, status int, desc string) {
+	team := get_team(r.Host)
 	title := http.StatusText(status)
 	if title == "" {
 		title = "Unknown Error"
 	}
 	page := &PageError{
 		Title:     title,
+		Team:      team,
 		ErrorCode: status,
 		ErrorDesc: desc,
 	}
@@ -432,4 +462,9 @@ func handleError(w http.ResponseWriter, r *http.Request, status int, desc string
 	if err := tpl["error"].ExecuteTemplate(w, "layout", page); err != nil {
 		http.Error(w, page.ErrorDesc, page.ErrorCode)
 	}
+}
+
+func get_team(host string) string {
+	parts := strings.Split(host, ".")
+	return parts[0]
 }

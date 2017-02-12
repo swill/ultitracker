@@ -9,31 +9,24 @@ if [[ -z ${USER} || -z ${GROUP} || -z ${SERVER} ]]; then
 	exit 1
 fi
 
-# get the 'team' being deployed from the first positional argument
-TEAM=$1
-if [[ -z ${TEAM} ]]; then
-	echo -e "\nThe 'team' positional argument is required to deploy...\n"
-	exit 1
-fi
-
 # do the deploy
-echo -e "\ndeploying '${TEAM}'..."
+echo -e "\ndeploying ultitracker..."
 
 echo -e "\ncopying binary..."
-scp ./bin/ultitracker_linux_amd64 ${USER}@${SERVER}:/home/${USER}/ultitracker_${TEAM}
+scp ./bin/ultitracker_linux_amd64 ${USER}@${SERVER}:/home/${USER}/ultitracker
 
 echo -e "\ncopying app config..."
-scp ./config/${TEAM}/config.* ${USER}@${SERVER}:/home/${USER}/ultitracker_${TEAM}
+scp ./config.* ${USER}@${SERVER}:/home/${USER}/ultitracker
 
 echo -e "\ncopying supervisor config..."
-scp ./config/${TEAM}/supervisor.conf ${USER}@${SERVER}:/home/${USER}/ultitracker_${TEAM}
+scp ./supervisor.conf ${USER}@${SERVER}:/home/${USER}/ultitracker
 
 echo -e "\ninstalling update..."
 ssh ${USER}@${SERVER} << EOM
-mv /home/${USER}/ultitracker_${TEAM}/ultitracker_linux_amd64 /home/${USER}/ultitracker_${TEAM}/ultitracker_${TEAM}
-sudo chown ${USER}:${GROUP} /home/${USER}/ultitracker_${TEAM}/ultitracker_${TEAM}
-sudo mv /home/${USER}/ultitracker_${TEAM}/supervisor.conf /etc/supervisor/conf.d/ultitracker_${TEAM}.conf
-supervisorctl restart ultitracker_${TEAM}
+mv /home/${USER}/ultitracker/ultitracker_linux_amd64 /home/${USER}/ultitracker/ultitracker
+sudo chown ${USER}:${GROUP} /home/${USER}/ultitracker/ultitracker
+sudo mv /home/${USER}/ultitracker/supervisor.conf /etc/supervisor/conf.d/ultitracker.conf
+supervisorctl restart ultitracker
 EOM
 
 echo -e "\nservice restarted..."
