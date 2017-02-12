@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2/google"
 	sheets "google.golang.org/api/sheets/v4"
@@ -63,8 +62,6 @@ var (
 )
 
 func main() {
-	flag.Parse() // parse flags
-
 	// set defaults
 	viper.SetDefault("player_range", "Settings!A:A")
 	viper.SetDefault("task_range", "Settings!B:B")
