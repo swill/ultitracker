@@ -36,21 +36,6 @@
 {{define "content"}}
 <div id="content" class="tasks">
 
-  {{ $length := len .Tasks }} {{ if eq $length 0 }}
-    <div class="box box-primary box-solid">
-      <div class="box-header with-border">
-        <h3 class="box-title">No Task Details!</h3>
-        <div class="box-tools pull-right"></div>
-        <!-- /.box-tools -->
-      </div>
-      <!-- /.box-header -->
-      <div class="box-body">
-        Tasks must have entries in order to be listed.
-      </div>
-      <!-- /.box-body -->
-    </div>
-  {{ end }}
-
   <div class="box box-primary box-solid">
     <div class="box-header with-border">
       <h3 class="box-title">Date Range</h3>
@@ -86,6 +71,21 @@
     </div>
     <!-- /.box-body -->
   </div>
+
+  {{ $length := len .Tasks }} {{ if eq $length 0 }}
+  <div class="box box-primary box-solid">
+    <div class="box-header with-border">
+      <h3 class="box-title">No Task Details!</h3>
+      <div class="box-tools pull-right"></div>
+      <!-- /.box-tools -->
+    </div>
+    <!-- /.box-header -->
+    <div class="box-body">
+      Tasks must have player entries in the date range to be listed.
+    </div>
+    <!-- /.box-body -->
+  </div>
+  {{ end }}
 
   {{ range $index, $task := .Tasks }}
   <div class="box box-primary">
