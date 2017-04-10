@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="/static/theme/admin-lte/bootstrap/css/bootstrap.min.css">
   <!-- bootstrap datepicker -->
   <link rel="stylesheet" href="/static/theme/admin-lte/plugins/datepicker/datepicker3.css">
+  <!-- bootstrap daterangepicker -->
+  <link rel="stylesheet" href="/static/theme/admin-lte/plugins/daterangepicker/daterangepicker.css">
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.5.0/css/font-awesome.min.css">
   <!-- Ionicons -->
@@ -37,6 +39,8 @@
       <a href="#" class="sidebar-toggle" data-toggle="offcanvas" role="button">
         <span class="sr-only">Toggle navigation</span>
       </a>
+
+      {{template "right_nav" .}}
     </nav>
 {{end}}
 
@@ -53,6 +57,7 @@
         <!-- Optionally, you can add icons to the links -->
         <li {{template "index_active"}}><a href="/"><i class="fa fa-heartbeat"></i> <span>Add Session</span></a></li>
         <li {{template "leaderboard_active"}}><a href="/leaderboard"><i class="fa fa-sort-amount-desc"></i> <span>Leaderboard</span></a></li>
+        <li {{template "tasks_active"}}><a href="/tasks"><i class="fa fa-cubes"></i> <span>Task Activity</span></a></li>
       </ul>
       <!-- /.sidebar-menu -->
     </section>
@@ -117,6 +122,8 @@
     Built with <i class="fa fa-heart" aria-hidden="true"></i> by <a href="https://github.com/swill" target="_blank">swill</a>
     &nbsp;
   </footer>
+
+  {{template "control_sidebar" .}}
 </div>
 <!-- ./wrapper -->
 
@@ -128,6 +135,9 @@
 <script src="/static/theme/admin-lte/bootstrap/js/bootstrap.min.js"></script>
 <!-- bootstrap datepicker -->
 <script src="/static/theme/admin-lte/plugins/datepicker/bootstrap-datepicker.js"></script>
+<!-- date-range-picker -->
+<script src="/static/theme/admin-lte/plugins/daterangepicker/moment.min.js"></script>
+<script src="/static/theme/admin-lte/plugins/daterangepicker/daterangepicker.js"></script>
 <!-- SlimScroll -->
 <script src="/static/theme/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
 <!-- AdminLTE App -->
@@ -144,7 +154,10 @@
 {{end}}
 
 {{define "content"}}{{end}}
+{{define "right_nav"}}{{end}}
+{{define "control_sidebar"}}{{end}}
 {{define "index_active"}}{{end}}}
 {{define "leaderboard_active"}}{{end}}
+{{define "tasks_active"}}{{end}}
 {{define "styles"}}{{end}}
 {{define "scripts"}}{{end}}

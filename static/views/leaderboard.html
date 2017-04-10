@@ -12,12 +12,34 @@
     font-size:120%;
   }
 
-  .boom.box,
-  .boom.box .box-title,
-  .boom.box .badge {
-    font-size:150%;
+  .boom.box .box-title {
+    font-weight:bold;
   }
 </style>
+{{end}}
+
+{{define "scripts"}}
+<script src="/static/js/js-cookie.js"></script>
+
+<script type="text/javascript">
+  $(function() {
+    // reload the page if the setting is set.
+    $('#leaderboard_rows').on('change', function() {
+      Cookies.set('leaderboard_rows', $('#leaderboard_rows').val(), { expires: 365 });
+      $('#control-sidebar-settings-form').submit();
+    });
+
+    // check if the default leaderboard rows setting has been set.
+    var leaderboard_rows = Cookies.get('leaderboard_rows')
+    if (typeof leaderboard_rows != 'undefined') {
+      prev_value = $('#leaderboard_rows').val();
+      $('#leaderboard_rows').val(leaderboard_rows);
+      if (prev_value != leaderboard_rows) {
+        $('#leaderboard_rows').trigger('change');
+      }
+    }
+  });
+</script>
 {{end}}
 
 
@@ -77,4 +99,52 @@
     </div>
 
 </div>
+{{end}}
+
+{{define "right_nav"}}
+<!-- Navbar Right Menu -->
+<div class="navbar-custom-menu">
+  <ul class="nav navbar-nav">
+    <!-- Control Sidebar Toggle Button -->
+    <li>
+      <a href="#" data-toggle="control-sidebar"><i class="fa fa-gears"></i></a>
+    </li>
+  </ul>
+</div>
+{{end}}
+
+{{define "control_sidebar"}}
+<!-- Control Sidebar -->
+  <aside class="control-sidebar control-sidebar-dark">
+    <!-- Create the tabs -->
+    <ul class="nav nav-tabs nav-justified control-sidebar-tabs">
+      <li class="active"><a href="#control-sidebar-settings-tab" data-toggle="tab"><i class="fa fa-wrench"></i></a></li>
+    </ul>
+    <!-- Tab panes -->
+    <div class="tab-content">
+      <!-- Settings tab content -->
+      <div class="tab-pane active" id="control-sidebar-settings-tab">
+        <form id="control-sidebar-settings-form" method="post">
+          <h3 class="control-sidebar-heading">Settings</h3>
+
+          <div class="form-group">
+            <label class="control-sidebar-subheading">
+              Leaderboard Rows
+              <input id="leaderboard_rows" name="leaderboard_rows" type="text" class="pull-right" style="width:35px; color:#222d32; text-align:center;" value="{{.LeaderboardRows}}" />
+            </label>
+
+            <p>
+              The number of player rows to show on the Leaderboard.
+            </p>
+          </div>
+          <!-- /.form-group -->
+        </form>
+      </div>
+      <!-- /.tab-pane -->
+    </div>
+  </aside>
+  <!-- /.control-sidebar -->
+  <!-- Add the sidebar's background. This div must be placed
+       immediately after the control sidebar -->
+  <div class="control-sidebar-bg"></div>
 {{end}}
