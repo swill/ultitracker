@@ -91,6 +91,7 @@ func main() {
 	}
 
 	// set global defaults
+	viper.SetDefault("verify_gdocs", true)
 	viper.SetDefault("port", 8080)
 	viper.SetDefault("service_creds", "google-service-account.json")
 
@@ -126,22 +127,24 @@ func main() {
 			log.Fatalf("Unable to retrieve Sheets Client for '%s': %v", team, err)
 		}
 
-		// get players list to validate that we have valid permissions on the specified sheet and the range works
-		_, err = sheet[team].Spreadsheets.Values.Get(config.GetString("spreadsheet_id"), config.GetString("player_range")).Do()
-		if err != nil {
-			log.Fatalf("Unable to access 'player_range' for '%s': %s", team, err.Error())
-		}
+		if viper.GetBool("verify_gdocs") {
+			// get players list to validate that we have valid permissions on the specified sheet and the range works
+			_, err = sheet[team].Spreadsheets.Values.Get(config.GetString("spreadsheet_id"), config.GetString("player_range")).Do()
+			if err != nil {
+				log.Fatalf("Unable to access 'player_range' for '%s': %s", team, err.Error())
+			}
 
-		// get tasks list to validate that we have valid permissions on the specified sheet and the range works
-		_, err = sheet[team].Spreadsheets.Values.Get(config.GetString("spreadsheet_id"), config.GetString("task_range")).Do()
-		if err != nil {
-			log.Fatalf("Unable to access 'task_range' for '%s': %s", team, err.Error())
-		}
+			// get tasks list to validate that we have valid permissions on the specified sheet and the range works
+			_, err = sheet[team].Spreadsheets.Values.Get(config.GetString("spreadsheet_id"), config.GetString("task_range")).Do()
+			if err != nil {
+				log.Fatalf("Unable to access 'task_range' for '%s': %s", team, err.Error())
+			}
 
-		// get stats list to validate that we have valid permissions on the specified sheet and the range works
-		_, err = sheet[team].Spreadsheets.Values.Get(config.GetString("spreadsheet_id"), config.GetString("stats_range")).Do()
-		if err != nil {
-			log.Fatalf("Unable to access 'stats_range' for '%s': %s", team, err.Error())
+			// get stats list to validate that we have valid permissions on the specified sheet and the range works
+			_, err = sheet[team].Spreadsheets.Values.Get(config.GetString("spreadsheet_id"), config.GetString("stats_range")).Do()
+			if err != nil {
+				log.Fatalf("Unable to access 'stats_range' for '%s': %s", team, err.Error())
+			}
 		}
 	}
 
@@ -150,9 +153,9 @@ func main() {
 		"fmt": func(f float64) string { return fmt.Sprintf("%.2f", f) },
 		"inc": func(i int) int { return i + 1 },        // 1 based array from 0 based array
 		"mod": func(i, j int) bool { return i%j == 0 }, // modulo: {{if mod $index 4}}
-		"cel": func(t Task) int { return int(math.Ceil(float64(t.Players.Len()) / 4)) },
-		"lng": func(t Task) int { return t.Players.Len() },
-		"sum": func(t Task) float64 { return t.Players.Sum() },
+		"cel": func(b Leaderboard) int { return int(math.Ceil(float64(b.Players.Len()) / 4)) },
+		"lng": func(b Leaderboard) int { return b.Players.Len() },
+		"sum": func(b Leaderboard) float64 { return b.Players.Sum() },
 		"raw": func(msg interface{}) template.HTML { return template.HTML(msg.(template.HTML)) },
 	}
 	// setup templates
@@ -162,9 +165,6 @@ func main() {
 	tpl["leaderboard"] = template.Must(template.New("").Funcs(func_map).Parse(fmt.Sprintf("%s%s",
 		FSMustString(use_local_static, "/static/views/leaderboard.html"),
 		FSMustString(use_local_static, "/static/views/layout.html"))))
-	tpl["tasks"] = template.Must(template.New("").Funcs(func_map).Parse(fmt.Sprintf("%s%s",
-		FSMustString(use_local_static, "/static/views/tasks.html"),
-		FSMustString(use_local_static, "/static/views/layout.html"))))
 	tpl["error"] = template.Must(template.New("").Funcs(func_map).Parse(fmt.Sprintf("%s%s",
 		FSMustString(use_local_static, "/static/views/error.html"),
 		FSMustString(use_local_static, "/static/views/layout.html"))))
@@ -172,7 +172,6 @@ func main() {
 	// handle the url routing
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/leaderboard", handleLeaderboard)
-	http.HandleFunc("/tasks", handleTasks)
 	http.HandleFunc("/submit-entry", handleSubmitEntry)
 	http.Handle("/static/", http.FileServer(FS(use_local_static)))
 
@@ -249,6 +248,9 @@ type PageLeaderboard struct {
 	Team            string
 	LeaderboardRows int
 	Leaderboards    LeaderboardList
+	DateRangeActive bool
+	StartDate       string
+	EndDate         string
 }
 
 type Leaderboard struct {
@@ -297,12 +299,32 @@ func handleLeaderboard(w http.ResponseWriter, r *http.Request) {
 	team := get_team(r.Host)
 	config := teams[team]
 	page := &PageLeaderboard{
-		Title:        fmt.Sprintf("Leaderboards | %s UltiTracker", config.GetString("name")),
-		Team:         team,
-		Leaderboards: LeaderboardList{},
+		Title:           fmt.Sprintf("Leaderboards | %s UltiTracker", config.GetString("name")),
+		Team:            team,
+		Leaderboards:    LeaderboardList{},
+		DateRangeActive: true,
 	}
 
+	var start_date time.Time
+	var end_date time.Time
 	r.ParseForm()
+	if len(r.Form["date-range-active"]) > 0 {
+		if len(r.Form["date-range"]) > 0 {
+			parts := strings.Split(r.Form.Get("date-range"), " - ")
+			if len(parts) > 1 {
+				page.StartDate = parts[0]
+				start_date, _ = time.Parse(date_format, parts[0])
+				page.EndDate = parts[1]
+				end_date, _ = time.Parse(date_format, parts[1])
+			}
+		} else {
+			end_date = time.Now()
+			start_date = end_date.AddDate(0, 0, -6)
+			page.StartDate = start_date.Format(date_format)
+			page.EndDate = end_date.Format(date_format)
+		}
+	}
+
 	if len(r.Form["leaderboard_rows"]) > 0 {
 		rows, err := strconv.Atoi(r.Form.Get("leaderboard_rows"))
 		if err == nil {
@@ -329,32 +351,48 @@ func handleLeaderboard(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(stats_resp.Values) > 0 {
 		for r, row := range stats_resp.Values {
-			if r != 0 { // heading row
+			if r != 0 && len(row) > DATE_COL { // not heading row and has all required fields
 				name := strings.TrimSpace(row[NAME_COL].(string))
 				task := strings.TrimSpace(row[TASK_COL].(string))
+				date := strings.TrimSpace(row[DATE_COL].(string))
 				duration, err := strconv.ParseFloat(row[TIME_COL].(string), 64)
 				if err != nil {
 					continue
 				}
 
-				// handle overall time
-				if col_val, ok := overall[name]; ok {
-					overall[name] = col_val + duration
-				} else {
-					overall[name] = duration
+				// determine if range is set and if entry is in range
+				add_data := true
+				if !start_date.IsZero() && !end_date.IsZero() && end_date.Unix() >= start_date.Unix() {
+					add_data = false
+					entry_date, err := time.Parse(date_format, date)
+					if err == nil {
+						if entry_date.Unix() >= start_date.Unix() && entry_date.Unix() <= end_date.Unix() {
+							add_data = true
+						}
+					}
 				}
 
-				// handle per task maps of player time
-				if _, ok := task_maps[task]; ok {
-					if player_score, ok := task_maps[task][name]; ok {
-						task_maps[task][name] = player_score + duration
+				// add this entry to the data
+				if add_data {
+					// handle overall time
+					if col_val, ok := overall[name]; ok {
+						overall[name] = col_val + duration
 					} else {
-						task_maps[task][name] = duration
+						overall[name] = duration
 					}
-				} else {
-					player := make(map[string]float64)
-					player[name] = duration
-					task_maps[task] = player
+
+					// handle per task maps of player time
+					if _, ok := task_maps[task]; ok {
+						if player_score, ok := task_maps[task][name]; ok {
+							task_maps[task][name] = player_score + duration
+						} else {
+							task_maps[task][name] = duration
+						}
+					} else {
+						player := make(map[string]float64)
+						player[name] = duration
+						task_maps[task] = player
+					}
 				}
 			}
 		}
@@ -390,120 +428,6 @@ func handleLeaderboard(w http.ResponseWriter, r *http.Request) {
 
 	// render the page...
 	if err := tpl["leaderboard"].ExecuteTemplate(w, "layout", page); err != nil {
-		log.Printf("Error executing template: %s\n", err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-	return
-}
-
-type PageTasks struct {
-	Title     string
-	Team      string
-	Tasks     TaskList
-	StartDate string
-	EndDate   string
-}
-
-type Task struct {
-	Title   string
-	Players PlayerList
-	Weight  float64
-}
-
-type TaskList []Task
-
-func (l TaskList) Len() int           { return len(l) }
-func (l TaskList) Less(i, j int) bool { return l[i].Weight < l[j].Weight }
-func (l TaskList) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
-
-// tasks page
-func handleTasks(w http.ResponseWriter, r *http.Request) {
-	team := get_team(r.Host)
-	config := teams[team]
-	page := &PageTasks{
-		Title: fmt.Sprintf("Tasks | %s UltiTracker", config.GetString("name")),
-		Team:  team,
-		Tasks: TaskList{},
-	}
-
-	var start_date time.Time
-	var end_date time.Time
-	r.ParseForm()
-	if len(r.Form["date-range"]) > 0 {
-		parts := strings.Split(r.Form["date-range"][0], " - ")
-		if len(parts) > 1 {
-			page.StartDate = parts[0]
-			start_date, _ = time.Parse(date_format, parts[0])
-			page.EndDate = parts[1]
-			end_date, _ = time.Parse(date_format, parts[1])
-		}
-	} else {
-		end_date = time.Now()
-		start_date = end_date.AddDate(0, 0, -6)
-		page.StartDate = start_date.Format(date_format)
-		page.EndDate = end_date.Format(date_format)
-	}
-
-	task_maps := make(map[string]map[string]float64)
-	// get players list
-	stats_resp, err := sheet[team].Spreadsheets.Values.Get(config.GetString("spreadsheet_id"), config.GetString("stats_range")).Do()
-	if err != nil {
-		log.Printf("Unable to retrieve stats list from sheet. %s", err.Error())
-	}
-	if len(stats_resp.Values) > 0 {
-		for r, row := range stats_resp.Values {
-			if r != 0 { // heading row
-				name := strings.TrimSpace(row[NAME_COL].(string))
-				task := strings.TrimSpace(row[TASK_COL].(string))
-				date := strings.TrimSpace(row[DATE_COL].(string))
-				duration, err := strconv.ParseFloat(row[TIME_COL].(string), 64)
-				if err != nil {
-					continue
-				}
-
-				add_data := true
-				if !start_date.IsZero() && !end_date.IsZero() && end_date.Unix() >= start_date.Unix() {
-					add_data = false
-					entry_date, err := time.Parse(date_format, date)
-					if err == nil {
-						if entry_date.Unix() >= start_date.Unix() && entry_date.Unix() <= end_date.Unix() {
-							add_data = true
-						}
-					}
-				}
-
-				// handle per task maps of player time
-				if add_data {
-					if _, ok := task_maps[task]; ok {
-						if player_score, ok := task_maps[task][name]; ok {
-							task_maps[task][name] = player_score + duration
-						} else {
-							task_maps[task][name] = duration
-						}
-					} else {
-						player := make(map[string]float64)
-						player[name] = duration
-						task_maps[task] = player
-					}
-				}
-			}
-		}
-	}
-
-	// add Tasks for the different tasks
-	if len(task_maps) > 0 {
-		for task, player_map := range task_maps {
-			if len(player_map) > 0 {
-				pl := OrderPlayers(player_map)
-				page.Tasks = append(page.Tasks, Task{task, pl, pl.Sum()})
-			}
-		}
-	}
-
-	sort.Sort(sort.Reverse(page.Tasks))
-
-	// render the page...
-	if err := tpl["tasks"].ExecuteTemplate(w, "layout", page); err != nil {
 		log.Printf("Error executing template: %s\n", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
