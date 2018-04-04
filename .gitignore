@@ -1,4 +1,5 @@
 .DS_Store
+.vscode
 assets/*
 bin/*
 __config.sh
