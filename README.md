@@ -51,7 +51,7 @@ chown=cca-user:cca-user
 
 Reload supervisor with the new config.
 ```bash
-/etc/supervisor/supervisord.conf
+sudo supervisorctl reload
 ```
 
 RUN / BUILD / DEPLOY
