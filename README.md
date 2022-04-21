@@ -35,13 +35,13 @@ In order to run this application, you need to first configure a Google Sheet, cr
 DEPLOY DEPENDENCIES
 -------------------
 
-On the instance you plan to run the service on, assuming you are using `supervisord`, you will need to do the following:
+On the instance you plan to run the service on, assuming you are using `supervisord`, you will need to do the following.
 
 ```bash
 sudo apt install supervisor
 ```
 
-Update the ... file to include:
+Update the `/etc/supervisor/supervisord.conf` file to include the following, where `cca-user` is the name of the user and group on the machine.
 ```bash
 [unix_http_server]
 file=/var/run/supervisor.sock   ; (the path to the socket file)
@@ -49,6 +49,10 @@ chmod=0766                       ; sockef file mode (default 0700)
 chown=cca-user:cca-user
 ```
 
+Reload supervisor with the new config.
+```bash
+/etc/supervisor/supervisord.conf
+```
 
 RUN / BUILD / DEPLOY
 --------------------
