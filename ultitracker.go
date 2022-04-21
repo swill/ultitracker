@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -32,13 +33,12 @@ const (
 // spreadsheet URL looks like:
 // // https://docs.google.com/spreadsheets/d/1Kh7AcFON0ZGHGaeDQpqbLLIndtRrZTdD5XVTv6CTjfI/edit#gid=0
 var (
-	tpl              map[string]*template.Template
-	sheet            map[string]*sheets.Service
-	teams            map[string]*viper.Viper
-	use_local_static = false
-	prefix           = "team_"
-	date_format      = "02/01/2006"
-	time_map         = map[string]float64{
+	tpl         map[string]*template.Template
+	sheet       map[string]*sheets.Service
+	teams       map[string]*viper.Viper
+	prefix      = "team_"
+	date_format = "02/01/2006"
+	time_map    = map[string]float64{
 		"15min":    0.25,
 		"30min":    0.5,
 		"45min":    0.75,
@@ -66,6 +66,10 @@ var (
 	}
 )
 
+// static is our static web server content
+//go:embed static
+var static embed.FS
+
 func main() {
 	tpl = make(map[string]*template.Template)
 	sheet = make(map[string]*sheets.Service)
@@ -79,10 +83,11 @@ func main() {
 		log.Fatalf("Error parsing config file: %s", err)
 	}
 
-	for _, key := range viper.AllKeys() {
-		if strings.HasPrefix(key, prefix) {
-			team := strings.TrimPrefix(key, prefix)
-			teams[team] = viper.Sub(key)
+	teamNames := teamKeys(viper.AllKeys())
+	for _, teamFull := range teamNames {
+		if strings.HasPrefix(teamFull, prefix) {
+			team := strings.TrimPrefix(teamFull, prefix)
+			teams[team] = viper.Sub(teamFull)
 			// set team defaults
 			teams[team].SetDefault("player_range", "Settings!A:A")
 			teams[team].SetDefault("task_range", "Settings!B:B")
@@ -96,18 +101,18 @@ func main() {
 	viper.SetDefault("service_creds", "google-service-account.json")
 
 	// validate we have all the config required to start
-	missing_config := false
+	missingConfig := false
 	for team, config := range teams {
 		if !config.IsSet("name") {
 			log.Printf("Error: Missing required 'name' details in config file for '%s'.\n", team)
-			missing_config = true
+			missingConfig = true
 		}
 		if !config.IsSet("spreadsheet_id") {
 			log.Printf("Error: Missing required 'spreadsheet_id' details in config file for '%s'. EG: '1Kh7AcFON0ZGHGaeDQpqbLLIndtRrZTdD5XVTv6CTjfI'\n", team)
-			missing_config = true
+			missingConfig = true
 		}
 	}
-	if missing_config {
+	if missingConfig {
 		log.Fatal("Missing required configuration details, please update the config file.")
 	}
 
@@ -149,7 +154,7 @@ func main() {
 	}
 
 	// setup template functions
-	func_map := template.FuncMap{
+	funcMap := template.FuncMap{
 		"fmt": func(f float64) string { return fmt.Sprintf("%.2f", f) },
 		"inc": func(i int) int { return i + 1 },        // 1 based array from 0 based array
 		"mod": func(i, j int) bool { return i%j == 0 }, // modulo: {{if mod $index 4}}
@@ -159,21 +164,15 @@ func main() {
 		"raw": func(msg interface{}) template.HTML { return template.HTML(msg.(template.HTML)) },
 	}
 	// setup templates
-	tpl["index"] = template.Must(template.New("").Funcs(func_map).Parse(fmt.Sprintf("%s%s",
-		FSMustString(use_local_static, "/static/views/index.html"),
-		FSMustString(use_local_static, "/static/views/layout.html"))))
-	tpl["leaderboard"] = template.Must(template.New("").Funcs(func_map).Parse(fmt.Sprintf("%s%s",
-		FSMustString(use_local_static, "/static/views/leaderboard.html"),
-		FSMustString(use_local_static, "/static/views/layout.html"))))
-	tpl["error"] = template.Must(template.New("").Funcs(func_map).Parse(fmt.Sprintf("%s%s",
-		FSMustString(use_local_static, "/static/views/error.html"),
-		FSMustString(use_local_static, "/static/views/layout.html"))))
+	tpl["index"] = template.Must(template.New("").Funcs(funcMap).ParseFS(static, "static/views/index.html", "static/views/layout.html"))
+	tpl["leaderboard"] = template.Must(template.New("").Funcs(funcMap).ParseFS(static, "static/views/leaderboard.html", "static/views/layout.html"))
+	tpl["error"] = template.Must(template.New("").Funcs(funcMap).ParseFS(static, "static/views/error.html", "static/views/layout.html"))
 
 	// handle the url routing
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/leaderboard", handleLeaderboard)
 	http.HandleFunc("/submit-entry", handleSubmitEntry)
-	http.Handle("/static/", http.FileServer(FS(use_local_static)))
+	http.Handle("/static/", http.FileServer(http.FS(static)))
 
 	// serve single root level files
 	handleTeamSingle("/favicon.ico", "favicon.png")
@@ -181,6 +180,27 @@ func main() {
 	// start the web server
 	log.Printf("ultitracker started - http://localhost:%d\n", viper.GetInt("port"))
 	http.ListenAndServe(fmt.Sprintf(":%d", viper.GetInt("port")), nil)
+}
+
+func teamKeys(allKeys []string) []string {
+	teams := []string{}
+	for _, fullKey := range allKeys {
+		key := strings.Split(fullKey, ".")[0]
+		if !inString(key, teams) {
+			teams = append(teams, key)
+		}
+
+	}
+	return teams
+}
+
+func inString(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }
 
 type PageIndex struct {
@@ -495,8 +515,8 @@ func handleSubmitEntry(w http.ResponseWriter, r *http.Request) {
 func handleTeamSingle(pattern, filename string) {
 	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		team := get_team(r.Host)
-		filepath := fmt.Sprintf("/static/team/%s/img/%s", team, filename)
-		b, err := FSByte(use_local_static, filepath)
+		filepath := fmt.Sprintf("static/team/%s/img/%s", team, filename)
+		b, err := static.ReadFile(filepath)
 		if err != nil {
 			http.Error(w, "Resource not found.", 404)
 		}
